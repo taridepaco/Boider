@@ -10,6 +10,13 @@ Cada boid solo ve a sus vecinos cercanos y sigue tres reglas:
 
 Además esquiva los obstáculos rojos y los bordes del lienzo lo empujan hacia dentro.
 
+## Dónde verlo
+
+- https://taridepaco.github.io/Boider/ (GitHub Pages)
+- https://boider.taridepaco.com.es
+
+Cómo se publica cada uno: [DEPLOY.md](DEPLOY.md).
+
 ## Panel de control
 
 El panel lateral permite cambiar en vivo:
