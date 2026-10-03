@@ -23,6 +23,14 @@ const DEFAULT_PARAMS = {
     edgeK: 0.3,
 
     obstacleRadius: 80,
+
+    // field of view in degrees: neighbours behind the boid are ignored
+    fov: 270,
+
+    // mouse: 'obstacle' (click to add/remove), 'predator' (flee), 'bait' (attract)
+    mouseMode: 'obstacle',
+    mouseRadius: 150,
+    mouseK: 2.0,
 };
 
 const params = { ...DEFAULT_PARAMS };

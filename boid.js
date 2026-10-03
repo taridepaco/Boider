@@ -11,10 +11,18 @@ class Boid {
     }
 
     // Phase 1 of the update: read neighbours, write only this.ax/this.ay.
-    computeForces(grid, obstacles) {
+    computeForces(grid, obstacles, pointer) {
         const rC2 = params.radiusCohesion ** 2;
         const rA2 = params.radiusAlignment ** 2;
         const rS2 = params.radiusSeparation ** 2;
+        const rMax2 = Math.max(rC2, rA2, rS2);
+
+        // Field of view test without square roots: a neighbour is visible when
+        // the angle between our velocity and the direction to it is <= fov/2,
+        // i.e. dot >= cos(fov/2) * |d| * |v|. Both sides are squared, keeping signs.
+        const checkFov = params.fov < 360;
+        const cosHalf = Math.cos(params.fov / 2 * Math.PI / 180);
+        const cos2v2 = cosHalf * cosHalf * (this.vx * this.vx + this.vy * this.vy);
 
         let cohX = 0, cohY = 0, cohN = 0;
         let aliX = 0, aliY = 0, aliN = 0;
@@ -29,6 +37,15 @@ class Boid {
                 const dx = this.x - other.x;
                 const dy = this.y - other.y;
                 const d2 = dx * dx + dy * dy;
+                if (d2 >= rMax2) continue;
+                if (checkFov) {
+                    const dot = -(dx * this.vx + dy * this.vy);
+                    const lhs = dot * dot, rhs = cos2v2 * d2;
+                    const visible = cosHalf >= 0
+                        ? dot >= 0 && lhs >= rhs
+                        : dot >= 0 || lhs <= rhs;
+                    if (!visible) continue;
+                }
                 if (d2 < rC2) { cohX += other.x; cohY += other.y; cohN++; }
                 if (d2 < rA2) { aliX += other.vx; aliY += other.vy; aliN++; }
                 if (d2 < rS2 && d2 > 0) {
@@ -53,6 +70,15 @@ class Boid {
             if (d2 < rO2 && d2 > 0) { obsX += dx / d2; obsY += dy / d2; obsN++; }
         }
         if (obsN > 0) this.steer(obsX, obsY, params.obstacleK);
+
+        if (pointer.active && params.mouseMode !== 'obstacle') {
+            const dx = this.x - pointer.x;
+            const dy = this.y - pointer.y;
+            if (dx * dx + dy * dy < params.mouseRadius ** 2) {
+                const sign = params.mouseMode === 'predator' ? 1 : -1;
+                this.steer(sign * dx, sign * dy, params.mouseK);
+            }
+        }
 
         this.applyEdges();
     }
