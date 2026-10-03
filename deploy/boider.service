@@ -12,7 +12,7 @@ ExecStart=/usr/bin/python3 -m http.server 8002 --bind 127.0.0.1 --directory /opt
 Restart=always
 RestartSec=5
 
-# Isolation (same as Viser). Static, read-only site: no ReadWritePaths.
+# Isolation. Static, read-only site: no ReadWritePaths.
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
