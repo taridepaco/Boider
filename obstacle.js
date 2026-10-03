@@ -1,12 +1,15 @@
+// Obstacles keep their position normalised to the canvas (0..1) so they
+// stay in place relative to the canvas when it is resized.
 class Obstacle {
-    constructor(x, y) {
-        this.position = createVector(x, y)
-        this.radiusSeparation = 100
+    constructor(nx, ny) {
+        this.nx = nx;
+        this.ny = ny;
+        this.x = nx * width;
+        this.y = ny * height;
     }
 
-    show() {
-        strokeWeight(20);
-        stroke('red');
-        point(this.position.x, this.position.y);
+    resize() {
+        this.x = this.nx * width;
+        this.y = this.ny * height;
     }
 }
