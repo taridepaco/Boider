@@ -5,23 +5,23 @@ Boider es una web estática y se publica en dos sitios con los mismos ficheros:
 | Dónde | URL | Cómo se actualiza |
 |---|---|---|
 | GitHub Pages | https://taridepaco.github.io/Boider/ | Automáticamente con cada push a `master` (*Settings → Pages → Deploy from a branch → master → / (root)*). |
-| PC de casa | https://boider.taridepaco.com.es | Por el túnel de Cloudflare `viser`, con los pasos de abajo. |
+| Servidor propio | https://boider.taridepaco.com.es | Por un túnel de Cloudflare ya existente, con los pasos de abajo. |
 
 Todas las rutas son relativas, así que la web funciona igual en la raíz de un dominio que bajo `/Boider/`.
 
 ## boider.taridepaco.com.es (túnel de Cloudflare en WSL)
 
 ```
-Navegador ── HTTPS ── Cloudflare ── túnel «viser» ──► cloudflared (WSL) ──► http://localhost:8002
+Navegador ── HTTPS ── Cloudflare ── túnel <TUNEL> ──► cloudflared (WSL) ──► http://localhost:8002
                                                                              python3 -m http.server en 127.0.0.1
 ```
 
-- **Servicio:** `boider.service`. Usuario de sistema `boider` y aislamiento de systemd igual que el de Viser.
+- **Servicio:** `boider.service`. Usuario de sistema `boider` y aislamiento de systemd.
 - **Ficheros servidos:** `/opt/boider`. Es una copia que hace `deploy/install.sh`, nunca el repo entero.
 - **Puerto:** `8002`, solo en `127.0.0.1`.
 - **Caché:** Cloudflare guarda JS y CSS durante 4 h. Por eso `install.sh` cambia cada `?v=dev` de `index.html` por un hash del contenido, y tras cada actualización se piden ficheros nuevos.
 
-Los comandos con `sudo` se ejecutan en WSL desde la raíz del repo, clonado por ejemplo en `~/Boider`.
+Los comandos con `sudo` se ejecutan en WSL desde la raíz del repo, clonado por ejemplo en `~/Boider`. Sustituye `<TUNEL>` por el nombre de tu túnel, que puedes ver con `cloudflared tunnel list`.
 
 ### 1. Comprobar que el puerto está libre
 
@@ -53,8 +53,7 @@ Edita la configuración con `sudo nano /etc/cloudflared/config.yml` y añade la 
 
 ```yaml
 ingress:
-  - hostname: viser.taridepaco.com.es
-    service: http://localhost:8000
+  # ...tus otras entradas...
   - hostname: boider.taridepaco.com.es
     service: http://localhost:8002
   - service: http_status:404
@@ -69,7 +68,7 @@ cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml
 Ejecútalo como tu usuario, sin sudo:
 
 ```sh
-cloudflared tunnel route dns viser boider.taridepaco.com.es
+cloudflared tunnel route dns <TUNEL> boider.taridepaco.com.es
 ```
 
 ### 6. Reiniciar el túnel y comprobar
@@ -78,7 +77,6 @@ cloudflared tunnel route dns viser boider.taridepaco.com.es
 sudo systemctl restart cloudflared
 systemctl status boider cloudflared --no-pager
 curl -sI https://boider.taridepaco.com.es/ | head -1
-curl -sI https://viser.taridepaco.com.es/login.html | head -1   # Viser sigue bien
 systemd-analyze security boider
 ```
 
