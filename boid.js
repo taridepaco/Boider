@@ -1,130 +1,148 @@
 class Boid {
     constructor() {
-        this.radiusCohesion = 70
-        this.radiusSeparation = 40
-        this.radiusSeparationObs = 80
-        this.radiusAlignment = 100
-
-        this.cohesionK = 0.001
-        this.separationK = 0.03
-        this.alignmentK = 0.1
-
-        this.vMax = 8
-        this.margin = 150
-        this.increment = 1
-
-        this.position = createVector(random(this.margin-10, width - this.margin-10), random(this.margin-10, height - this.margin-10));
-        this.velocity = createVector(0, 0);
-        this.acceleration = createVector(0, 0);
+        const m = Math.min(params.margin, width / 4, height / 4);
+        this.x = random(m, width - m);
+        this.y = random(m, height - m);
+        const angle = random(TWO_PI);
+        this.vx = Math.cos(angle) * params.vMax / 2;
+        this.vy = Math.sin(angle) * params.vMax / 2;
+        this.ax = 0;
+        this.ay = 0;
     }
 
-    update(flock, obstacles) {
-        // update position
-        this.position.add(this.velocity);
-        this.fixPosition()
+    // Phase 1 of the update: read neighbours, write only this.ax/this.ay.
+    computeForces(grid, obstacles, pointer) {
+        const rC2 = params.radiusCohesion ** 2;
+        const rA2 = params.radiusAlignment ** 2;
+        const rS2 = params.radiusSeparation ** 2;
+        const rMax2 = Math.max(rC2, rA2, rS2);
 
-        // update velocity
-        this.velocity.add(this.acceleration);
-        this.fixVelocity()
+        // Field of view test without square roots: a neighbour is visible when
+        // the angle between our velocity and the direction to it is <= fov/2,
+        // i.e. dot >= cos(fov/2) * |d| * |v|. Both sides are squared, keeping signs.
+        const checkFov = params.fov < 360;
+        const cosHalf = Math.cos(params.fov / 2 * Math.PI / 180);
+        const cos2v2 = cosHalf * cosHalf * (this.vx * this.vx + this.vy * this.vy);
 
-        // update acceleration
-        const cohesion = p5.Vector.mult(this.getCohesion(flock), this.cohesionK);
-        const alignment = p5.Vector.mult(this.getAlignment(flock), this.alignmentK);
-        const separation = p5.Vector.mult(this.getSeparation(flock, obstacles), this.separationK);
-        this.acceleration = p5.Vector.add(alignment, p5.Vector.add(separation, cohesion))
-    }
+        let cohX = 0, cohY = 0, cohN = 0;
+        let aliX = 0, aliY = 0, aliN = 0;
+        let sepX = 0, sepY = 0, sepN = 0;
 
-    show() {
-        strokeWeight(2);
-        stroke(255);
-        this.getShape()
-        // point(this.position.x, this.position.y);
-        
-    }
-
-    getShape() {
-        if (this.velocity.mag() < 0.001) {
-            strokeWeight(12)
-            point(this.position.x, this.position.y);
-        } else  {
-            const p1 = p5.Vector.add(createVector(this.velocity.x, this.velocity.y).normalize().mult(8), this.position)
-            const p2 = p5.Vector.add(createVector(-this.velocity.y, this.velocity.x).normalize().mult(3), this.position)
-            const p3 = p5.Vector.add(createVector(this.velocity.y, -this.velocity.x).normalize().mult(3), this.position)
-        triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)}
-    }
-
-    getCohesion(flock) {
-        const rest = flock.filter((boid) => boid !== this)
-        let number = 0
-        const avgPosition = createVector(0, 0)
-        for (let other of rest) {
-            const dist = p5.Vector.sub(this.position, other.position).mag()
-            if (dist < this.radiusCohesion) {
-                avgPosition.add(other.position)
-                number ++
-            } 
-        }
-        if (number === 0) return createVector(0, 0)
-        avgPosition.div(number)
-        // point(avgPosition.x, avgPosition.y)
-        return p5.Vector.sub(avgPosition, this.position )
-    }
-
-    getAlignment(flock) {
-        const rest = flock.filter((boid) => boid !== this)
-        let number = 0
-        const avgVelocity = createVector(0, 0)
-        for (let other of rest) {
-            const dist = p5.Vector.sub(this.position, other.position).mag()
-            if (dist < this.radiusAlignment) {
-                avgVelocity.add(other.velocity)
-                number ++
-            }  
-        }
-        if (number === 0) return createVector(0, 0)
-        avgVelocity.div(number).normalize().mult(this.vMax)
-        return p5.Vector.sub(avgVelocity, this.velocity)
-        
-    }
-
-    getSeparation(flock, obstacles) {
-        const rest = flock.filter((boid) => boid !== this)
-        const allAvoids = rest.concat(obstacles)
-        let number = 0
-        const avgDistance = createVector(0, 0)
-
-        for (let obstacle of allAvoids) {
-            const dist = p5.Vector.sub(this.position, obstacle.position).mag()
-            if (dist < obstacle.radiusSeparation) {
-                avgDistance.add(p5.Vector.sub(this.position, obstacle.position))
-                number ++
+        const cells = grid.neighborCells(this.x, this.y);
+        for (let c = 0; c < cells.length; c++) {
+            const cell = cells[c];
+            for (let i = 0; i < cell.length; i++) {
+                const other = cell[i];
+                if (other === this) continue;
+                const dx = this.x - other.x;
+                const dy = this.y - other.y;
+                const d2 = dx * dx + dy * dy;
+                if (d2 >= rMax2) continue;
+                if (checkFov) {
+                    const dot = -(dx * this.vx + dy * this.vy);
+                    const lhs = dot * dot, rhs = cos2v2 * d2;
+                    const visible = cosHalf >= 0
+                        ? dot >= 0 && lhs >= rhs
+                        : dot >= 0 || lhs <= rhs;
+                    if (!visible) continue;
+                }
+                if (d2 < rC2) { cohX += other.x; cohY += other.y; cohN++; }
+                if (d2 < rA2) { aliX += other.vx; aliY += other.vy; aliN++; }
+                if (d2 < rS2 && d2 > 0) {
+                    // closer neighbours push harder: (dx/d) / d
+                    sepX += dx / d2; sepY += dy / d2; sepN++;
+                }
             }
         }
 
-        if (number === 0) return createVector(0, 0)
-        avgDistance.div(number)
-        return p5.Vector.sub(avgDistance, this.velocity)
-    }
+        this.ax = 0;
+        this.ay = 0;
+        if (cohN > 0) this.steer(cohX / cohN - this.x, cohY / cohN - this.y, params.cohesionK);
+        if (aliN > 0) this.steer(aliX, aliY, params.alignmentK);
+        if (sepN > 0) this.steer(sepX, sepY, params.separationK);
 
-    fixPosition() {
-        if (this.position.x > width) this.position.x -= width;
-        if (this.position.x < 0) this.position.x += width;
-        if (this.position.y > height) this.position.y -= height;
-        if (this.position.y < 0) this.position.y += height;
-
-        if (this.position.x < this.margin) this.acceleration.x += (this.increment * (1 - this.position.x / this.margin));
-        if (this.position.x > width - this.margin) this.acceleration.x -= (this.increment * (1 - (width - this.position.x) / this.margin));
-        if (this.position.y < this.margin) this.acceleration.y += (this.increment * (1 - this.position.y / this.margin))
-        if (this.position.y > height - this.margin) this.acceleration.y -= (this.increment * (1 - (height - this.position.y) / this.margin));
-    }
-
-    fixVelocity() {
-        const magVel = this.velocity.mag()
-        if (magVel > this.vMax) {
-            this.velocity.normalize().mult(this.vMax)
-        } else {
-            this.velocity.mult(1.01)
+        let obsX = 0, obsY = 0, obsN = 0;
+        const rO2 = params.obstacleRadius ** 2;
+        for (const o of obstacles) {
+            const dx = this.x - o.x;
+            const dy = this.y - o.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < rO2 && d2 > 0) { obsX += dx / d2; obsY += dy / d2; obsN++; }
         }
+        if (obsN > 0) this.steer(obsX, obsY, params.obstacleK);
+
+        if (pointer.active && params.mouseMode !== 'obstacle') {
+            const dx = this.x - pointer.x;
+            const dy = this.y - pointer.y;
+            if (dx * dx + dy * dy < params.mouseRadius ** 2) {
+                const sign = params.mouseMode === 'predator' ? 1 : -1;
+                this.steer(sign * dx, sign * dy, params.mouseK);
+            }
+        }
+
+        this.applyEdges();
     }
 
+    // Reynolds steering: desired velocity along (sx, sy) at full speed,
+    // minus current velocity, capped at maxForce, then weighted.
+    steer(sx, sy, k) {
+        const mag = Math.hypot(sx, sy);
+        if (mag === 0) return;
+        let fx = sx / mag * params.vMax - this.vx;
+        let fy = sy / mag * params.vMax - this.vy;
+        const f = Math.hypot(fx, fy);
+        if (f > params.maxForce) {
+            fx *= params.maxForce / f;
+            fy *= params.maxForce / f;
+        }
+        this.ax += fx * k;
+        this.ay += fy * k;
+    }
+
+    // Soft walls: push inwards, harder the closer to the edge.
+    applyEdges() {
+        const m = Math.min(params.margin, width / 4, height / 4);
+        const k = params.edgeK;
+        if (this.x < m) this.ax += k * (1 - this.x / m);
+        if (this.x > width - m) this.ax -= k * (1 - (width - this.x) / m);
+        if (this.y < m) this.ay += k * (1 - this.y / m);
+        if (this.y > height - m) this.ay -= k * (1 - (height - this.y) / m);
+    }
+
+    // Phase 2 of the update: apply forces.
+    integrate() {
+        this.vx += this.ax;
+        this.vy += this.ay;
+
+        const speed = Math.hypot(this.vx, this.vy);
+        if (speed > params.vMax) {
+            this.vx *= params.vMax / speed;
+            this.vy *= params.vMax / speed;
+        } else if (speed < params.vMin) {
+            if (speed === 0) {
+                this.vx = params.vMin;
+            } else {
+                this.vx *= params.vMin / speed;
+                this.vy *= params.vMin / speed;
+            }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // hard limit as a safety net in case the soft walls are too weak
+        if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx); }
+        if (this.x > width) { this.x = width; this.vx = -Math.abs(this.vx); }
+        if (this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); }
+        if (this.y > height) { this.y = height; this.vy = -Math.abs(this.vy); }
+    }
+
+    // Adds this boid's triangle to the current beginShape(TRIANGLES) batch.
+    addVertices() {
+        const speed = Math.hypot(this.vx, this.vy) || 1;
+        const hx = this.vx / speed, hy = this.vy / speed;
+        vertex(this.x + hx * 8, this.y + hy * 8);
+        vertex(this.x - hy * 3, this.y + hx * 3);
+        vertex(this.x + hy * 3, this.y - hx * 3);
+    }
 }

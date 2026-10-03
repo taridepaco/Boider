@@ -1,22 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BoidJS</title>
+    <title>Boider</title>
+    <meta name="description" content="Simulación interactiva de bandadas (boids de Craig Reynolds).">
+    <link rel="stylesheet" href="style.css?v=dev">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.5.0/p5.min.js"></script>
-    <script src="render.js"></script>
-    <script src="boid.js"></script>
-    <script src="obstacle.js"></script>
-
-
+    <script src="params.js?v=dev"></script>
+    <script src="grid.js?v=dev"></script>
+    <script src="boid.js?v=dev"></script>
+    <script src="obstacle.js?v=dev"></script>
+    <script src="render.js?v=dev"></script>
+    <script src="ui.js?v=dev"></script>
 </head>
 <body>
-    <div id="canvasContainer"></div>
-    <div>
-        Hello, world
-    </div>
-
+    <details id="panel" open>
+        <summary>Boider <span>controles</span></summary>
+        <div id="controls"></div>
+    </details>
+    <main id="canvasContainer"></main>
 </body>
 </html>
