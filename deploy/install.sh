@@ -1,49 +1,33 @@
 #!/usr/bin/env bash
-# Copies the public files of Boider to $DEST (default /opt/boider) and replaces
-# every "?v=dev" in index.html with a short hash of the referenced file, so that
-# Cloudflare's 4 h cache of JS/CSS never mixes old assets with a new page.
-#
-#   sudo deploy/install.sh            # from the repo root
-#   DEST=/tmp/boider deploy/install.sh   # dry run anywhere
+# Installs or updates the site on this machine. Run with sudo after deploy/build.sh:
+#   deploy/build.sh && sudo deploy/install.sh
+# <name> is the name of the only deploy/<name>.service: copies dist/ to /opt/<name> and installs
+# that unit, which serves it on 127.0.0.1 as the system user <name>.
+# Idempotent: creates the user and the unit the first time, then just replaces the files and
+# restarts the service.
+# Common to every taridepaco site, copied from taridepaco.github.io: do not edit it here.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
-SRC="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="${DEST:-/opt/boider}"
-OWNER="${OWNER:-boider}"
-FILES=(index.html system.css style.css theme.js params.js grid.js boid.js obstacle.js render.js ui.js)
+[ "$(id -u)" -eq 0 ] || { echo "Run with sudo" >&2; exit 1; }
+[ -f dist/index.html ] || { echo "dist/ missing: run deploy/build.sh first" >&2; exit 1; }
 
-STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
+units=(deploy/*.service)
+[ "${#units[@]}" -eq 1 ] && [ -f "${units[0]}" ] || { echo "expected exactly one deploy/*.service" >&2; exit 1; }
+name=$(basename "${units[0]}" .service)
+dest=/opt/$name
 
-for f in "${FILES[@]}"; do
-    cp "$SRC/$f" "$STAGE/$f"
-done
+id "$name" >/dev/null 2>&1 || useradd --system --no-create-home --home-dir "$dest" --shell /usr/sbin/nologin "$name"
 
-for f in "${FILES[@]}"; do
-    [ "$f" = index.html ] && continue
-    hash="$(sha256sum "$STAGE/$f" | cut -c1-10)"
-    sed -i "s|\"$f?v=dev\"|\"$f?v=$hash\"|" "$STAGE/index.html"
-done
+# root owns the files, the service can only read them
+install -d -o root -g "$name" -m 750 "$dest"
+find "$dest" -mindepth 1 -delete
+cp -r dist/. "$dest/"
+chown -R "root:$name" "$dest"
+chmod -R u=rwX,g=rX,o= "$dest"
 
-if grep -q '?v=dev' "$STAGE/index.html"; then
-    echo "error: some ?v=dev left in index.html (file missing from FILES?)" >&2
-    exit 1
-fi
-
-mkdir -p "$DEST"
-# replace the contents atomically enough for a static site: copy, then delete stale files
-cp "$STAGE"/* "$DEST"/
-for existing in "$DEST"/*; do
-    name="$(basename "$existing")"
-    [[ " ${FILES[*]} " == *" $name "* ]] || rm -rf "$existing"
-done
-
-# readable by the service user only (the unit runs with UMask=0077)
-if id "$OWNER" >/dev/null 2>&1; then
-    chown -R "root:$OWNER" "$DEST"
-    chmod 750 "$DEST"
-    chmod 640 "$DEST"/*
-fi
-
-echo "Installed ${#FILES[@]} files in $DEST:"
-grep -o '[a-z]*\.\(js\|css\)?v=[0-9a-f]*' "$DEST/index.html"
+install -m 644 "${units[0]}" "/etc/systemd/system/$name.service"
+systemctl daemon-reload
+systemctl enable "$name" >/dev/null 2>&1
+systemctl restart "$name"
+systemctl --no-pager --lines=0 status "$name"
