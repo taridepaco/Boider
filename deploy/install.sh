@@ -10,7 +10,7 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="${DEST:-/opt/boider}"
 OWNER="${OWNER:-boider}"
-FILES=(index.html style.css params.js grid.js boid.js obstacle.js render.js ui.js)
+FILES=(index.html system.css style.css theme.js params.js grid.js boid.js obstacle.js render.js ui.js)
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

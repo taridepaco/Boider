@@ -30,6 +30,12 @@ El panel lateral permite cambiar en vivo:
 
 En el móvil el panel aparece debajo del lienzo y se puede plegar.
 
+## Aspecto
+
+La página usa el sistema de diseño común de [taridepaco.github.io](https://taridepaco.github.io/): `system.css` (tokens y piezas) y `theme.js` (tema claro, oscuro o el del sistema) son copias sin modificar de [ese repositorio](https://github.com/taridepaco/taridepaco.github.io) y no se editan aquí. Lo propio de Boider (panel, deslizadores, selector de modo, marco del lienzo) está en `style.css`, hecho con los mismos tokens.
+
+Está en español e inglés. El idioma y el tema elegidos se comparten con el resto de páginas de taridepaco.github.io.
+
 ## Ejecutar en local
 
 No necesita compilación. Basta con servir la carpeta:
