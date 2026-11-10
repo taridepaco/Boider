@@ -1,162 +1,227 @@
-:root {
-    --bg: #f5f6f8;
-    --surface: #ffffff;
-    --ink: #1b2129;
-    --muted: #5d6875;
-    --line: #dce1e7;
-    --accent: #2f6fd6;
-    --accent-ink: #ffffff;
-    color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #161a20;
-        --surface: #1e242c;
-        --ink: #e3e8ee;
-        --muted: #9aa5b2;
-        --line: #2e3640;
-        --accent: #6ea2f5;
-        --accent-ink: #10151b;
-        color-scheme: dark;
-    }
-}
-
-* { box-sizing: border-box; }
-
-html, body {
-    margin: 0;
-    height: 100%;
-}
+/* Boider: lo que el sistema común (system.css) no cubre.
+   Disposición de la página, el panel plegable, los deslizadores, el selector de modo
+   y el marco del lienzo. Todo con los tokens del sistema: sin colores literales ni radios. */
+html, body { height: 100%; overflow: hidden; }
 
 body {
     display: flex;
+    flex-direction: column;
     height: 100dvh;
-    background: var(--bg);
-    color: var(--ink);
-    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
     overflow: hidden;
 }
 
+/* barra superior */
+.topbar {
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+    padding-top: max(10px, env(safe-area-inset-top, 0px));
+    border-bottom: var(--bw) solid var(--line);
+}
+.topbar .back { text-underline-offset: 4px; }
+.topbar h1 { font-size: 1.25rem; }
+.topbar .tag { margin-right: auto; }
+
+.app {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+/* panel de controles */
 #panel {
     flex: none;
-    border-right: 1px solid var(--line);
     background: var(--surface);
+    border-right: var(--bw) solid var(--line);
     overflow-y: auto;
+    scrollbar-color: var(--line) var(--surface);
 }
-#panel[open] { width: 290px; }
+#panel[open] { width: 320px; }
 
 #panel > summary {
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 8px 16px;
     background: var(--surface);
-    border-bottom: 1px solid var(--line);
-    font-size: 17px;
-    font-weight: 650;
     cursor: pointer;
     user-select: none;
+    -webkit-user-select: none;
+    list-style: none;
 }
-#panel > summary span {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--muted);
-    margin-left: 6px;
+#panel > summary::-webkit-details-marker { display: none; }
+#panel > summary::after {
+    content: "[+]";
+    font-family: var(--f-util);
+    font-weight: 700;
+    font-size: var(--util);
 }
+#panel[open] > summary { border-bottom: var(--bw) solid var(--line); }
+#panel[open] > summary::after { content: "[–]"; }
+#panel > summary:focus-visible { outline-offset: -3px; }
 
-#controls {
-    padding: 4px 16px 16px;
+#controls { padding: 0 16px 24px; }
+
+.pitch {
+    padding: 14px 0 0;
+    font-size: .92rem;
+    color: var(--muted);
 }
 
 fieldset {
-    border: 0;
-    border-bottom: 1px solid var(--line);
+    min-width: 0;
     margin: 0;
-    padding: 12px 0;
+    padding: 0 0 16px;
+    border: 0;
+    border-bottom: var(--bw) dashed var(--line);
 }
 legend {
-    padding: 0;
-    margin-bottom: 8px;
-    font-size: 11px;
-    font-weight: 650;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--muted);
+    padding: 16px 0 0;
+    margin-bottom: 10px;
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: .8rem;
+    letter-spacing: -.02em;
 }
 
+/* deslizador: etiqueta y valor arriba, pista cuadrada debajo */
 .slider {
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: baseline;
     gap: 0 8px;
-    margin-bottom: 6px;
 }
+.slider + .slider { margin-top: 6px; }
+.slider label { display: block; font-size: .92rem; }
 .slider output {
+    font-family: var(--f-util);
+    font-weight: 700;
+    font-size: var(--util);
     font-variant-numeric: tabular-nums;
-    color: var(--muted);
 }
-.slider input {
+.slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
     grid-column: 1 / -1;
     width: 100%;
-    margin: 2px 0 0;
-    accent-color: var(--accent);
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    --thumb: 14px;
+    /* --p (0..1) lo pone ui.js; el relleno llega hasta el centro del mando */
+    --fill: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--p, 0));
+}
+.slider input[type="range"]::-webkit-slider-runnable-track {
+    box-sizing: border-box;
+    height: 14px;
+    border: var(--bw) solid var(--line);
+    background: linear-gradient(to right, var(--second) var(--fill), var(--bg) var(--fill));
+}
+.slider input[type="range"]::-moz-range-track {
+    box-sizing: border-box;
+    height: 14px;
+    border: var(--bw) solid var(--line);
+    background: linear-gradient(to right, var(--second) var(--fill), var(--bg) var(--fill));
+}
+.slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    width: var(--thumb);
+    height: 26px;
+    margin-top: -9px;
+    border: 0;
+    border-radius: 0;
+    background: var(--ink);
+}
+.slider input[type="range"]::-moz-range-thumb {
+    box-sizing: border-box;
+    width: var(--thumb);
+    height: 26px;
+    border: 0;
+    border-radius: 0;
+    background: var(--ink);
+}
+.slider input[type="range"]:hover::-webkit-slider-thumb,
+.slider input[type="range"]:active::-webkit-slider-thumb { background: var(--accent); }
+.slider input[type="range"]:hover::-moz-range-thumb,
+.slider input[type="range"]:active::-moz-range-thumb { background: var(--accent); }
+@media (pointer: coarse) {
+    .slider input[type="range"] { height: 36px; }
 }
 
+/* selector de modo del ratón: tres opciones pegadas, como el selector de idioma */
 .modes {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    overflow: hidden;
 }
 .modes input {
     position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
     opacity: 0;
     pointer-events: none;
 }
 .modes label {
-    padding: 6px 4px;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 36px;
+    padding: 6px 2px;
+    font-family: var(--f-util);
+    font-weight: 500;
+    font-size: .62rem;
+    letter-spacing: .02em;
+    text-transform: uppercase;
     text-align: center;
+    background: var(--bg);
+    border: var(--bw) solid var(--line);
     cursor: pointer;
-    font-size: 13px;
 }
-.modes label + input + label { border-left: 1px solid var(--line); }
-.modes input:checked + label {
-    background: var(--accent);
-    color: var(--accent-ink);
-}
+.modes label + input + label { border-left: 0; }
+.modes input:checked + label { background: var(--ink); color: var(--bg); }
 .modes input:focus-visible + label {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+    position: relative;
 }
 .hint {
-    margin: 6px 0 10px;
-    font-size: 12px;
+    margin: 8px 0 12px;
+    font-size: .86rem;
     color: var(--muted);
 }
 
 .buttons {
     display: grid;
-    gap: 8px;
-    padding-top: 14px;
+    gap: 14px;
+    padding: 18px 5px 0 0;
 }
-button {
-    font: inherit;
-    padding: 8px 12px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--bg);
-    color: var(--ink);
-    cursor: pointer;
-}
-button:hover { border-color: var(--accent); }
-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.buttons .btn { width: 100%; text-align: center; }
 
+/* el lienzo va enmarcado como una pantalla */
 #canvasContainer {
     flex: 1;
     min-width: 0;
     min-height: 0;
-    background: #22262e;
+    margin: 16px 21px 21px 16px;
+    margin-right: max(21px, env(safe-area-inset-right, 0px));
+    border: var(--bw) solid var(--line);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+    overflow: hidden;
 }
 #canvasContainer canvas {
     display: block;
@@ -164,12 +229,16 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 }
 
 @media (max-width: 720px) {
-    body { flex-direction: column-reverse; }
+    .topbar { gap: 8px 10px; }
+    .app { flex-direction: column-reverse; }
     #panel,
     #panel[open] {
         width: 100%;
         max-height: 45dvh;
         border-right: 0;
-        border-top: 1px solid var(--line);
+        border-top: var(--bw) solid var(--line);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+    #controls { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    #canvasContainer { margin: 12px 17px 17px 12px; }
 }

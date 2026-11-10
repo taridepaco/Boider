@@ -2,9 +2,28 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Boider</title>
     <meta name="description" content="Simulación interactiva de bandadas (boids de Craig Reynolds).">
+    <meta name="theme-color" content="#bfe3d6">
+    <script>
+        // idioma antes del primer pintado: ?lang=, luego la última elección, luego el navegador
+        (function () {
+            var l = null;
+            try {
+                var q = new URLSearchParams(location.search).get("lang"), s = null;
+                try { s = localStorage.getItem("taridepaco-lang"); } catch (e) { /* sin almacenamiento */ }
+                var n = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+                l = q || s || (/^es/i.test(n) ? "es" : "en");
+            } catch (e) { /* navegador antiguo */ }
+            document.documentElement.lang = l === "en" ? "en" : "es";
+        })();
+    </script>
+    <script src="theme.js?v=dev"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Martian+Mono:wght@500;700&display=swap">
+    <link rel="stylesheet" href="system.css?v=dev">
     <link rel="stylesheet" href="style.css?v=dev">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.5.0/p5.min.js"></script>
     <script src="params.js?v=dev"></script>
@@ -15,10 +34,22 @@
     <script src="ui.js?v=dev"></script>
 </head>
 <body>
-    <details id="panel" open>
-        <summary>Boider <span>controles</span></summary>
-        <div id="controls"></div>
-    </details>
-    <main id="canvasContainer"></main>
+    <header class="topbar">
+        <a class="util back" href="https://taridepaco.github.io/">← taridepaco</a>
+        <h1>Boider</h1>
+        <span class="tag" data-i18n="kind">Simulador</span>
+        <button class="chip" type="button" id="theme-btn">Tema: auto</button>
+        <div class="lang-switch" role="group" aria-label="Language / Idioma">
+            <button type="button" data-lang="es" lang="es" aria-label="Español" aria-pressed="true">ES</button>
+            <button type="button" data-lang="en" lang="en" aria-label="English" aria-pressed="false">EN</button>
+        </div>
+    </header>
+    <div class="app">
+        <details id="panel" open>
+            <summary><span class="util" data-i18n="panel">Controles</span></summary>
+            <div id="controls"></div>
+        </details>
+        <main id="canvasContainer"></main>
+    </div>
 </body>
 </html>

@@ -6,6 +6,37 @@ const initialObstacles = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]
 // Mouse/touch over the canvas. A mouse acts while hovering, a finger while touching.
 const pointer = { active: false, x: 0, y: 0 };
 
+// Canvas colours. The canvas does not inherit the CSS tokens, so they are read
+// from the page and refreshed when the theme changes (ui.js calls readPalette).
+// The sky is the one from the taridepaco island, with a day and a night version.
+const SKY = { day: ['#62bcd6', '#d9f2de'], night: ['#0a1424', '#274657'] };
+const BAIT = { day: '#4f8f47', night: '#74b34e' }; // "bosque" and "prado" of the shared palette
+let palette = null;
+
+function readPalette() {
+    if (typeof color !== 'function') return; // p5 not ready yet; setup() calls again
+    const css = getComputedStyle(document.documentElement);
+    const token = (name, alpha) => {
+        const c = color(css.getPropertyValue(name).trim());
+        if (alpha !== undefined) c.setAlpha(alpha);
+        return c;
+    };
+    const dark = window.Theme
+        ? Theme.isDark()
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const bait = color(dark ? BAIT.night : BAIT.day);
+    bait.setAlpha(70);
+    palette = {
+        sky: dark ? SKY.night : SKY.day,
+        ink: token('--ink'),
+        obstacle: token('--accent'),
+        obstacleReach: token('--accent', 150),
+        obstacleArea: token('--accent', 28),
+        predator: token('--accent', 70),
+        bait,
+    };
+}
+
 function canvasSize() {
     const container = document.getElementById('canvasContainer');
     return [Math.max(1, container.clientWidth), Math.max(1, container.clientHeight)];
@@ -20,6 +51,7 @@ function setup() {
     // the container also changes size when the panel is folded, not only on window resize
     new ResizeObserver(fitCanvas).observe(document.getElementById('canvasContainer'));
 
+    readPalette();
     resetObstacles();
     setBoidCount(params.boidCount);
 }
@@ -92,25 +124,32 @@ function draw() {
     for (const boid of flock) boid.integrate();
 
     // 4. draw in batches
-    background(34, 38, 46);
+    const sky = drawingContext.createLinearGradient(0, 0, 0, height);
+    sky.addColorStop(0, palette.sky[0]);
+    sky.addColorStop(1, palette.sky[1]);
+    drawingContext.fillStyle = sky;
+    drawingContext.fillRect(0, 0, width, height);
 
-    noFill();
-    strokeWeight(1);
-    stroke(200, 60, 60, 60);
+    // obstacles: reach as a faint disc, the obstacle itself as a square block
+    strokeWeight(1.5);
+    stroke(palette.obstacleReach);
+    fill(palette.obstacleArea);
     for (const o of obstacles) circle(o.x, o.y, params.obstacleRadius * 2);
-    stroke(200, 40, 40);
-    strokeWeight(20);
-    for (const o of obstacles) point(o.x, o.y);
+    rectMode(CENTER);
+    strokeWeight(3);
+    stroke(palette.ink);
+    fill(palette.obstacle);
+    for (const o of obstacles) square(o.x, o.y, 20);
 
     if (pointer.active && params.mouseMode !== 'obstacle') {
-        strokeWeight(1.5);
-        if (params.mouseMode === 'predator') stroke(240, 90, 90, 160);
-        else stroke(90, 210, 140, 160);
+        strokeWeight(2);
+        stroke(palette.ink);
+        fill(params.mouseMode === 'predator' ? palette.predator : palette.bait);
         circle(pointer.x, pointer.y, params.mouseRadius * 2);
     }
 
     noStroke();
-    fill(240);
+    fill(palette.ink);
     beginShape(TRIANGLES);
     for (const boid of flock) boid.addVertices();
     endShape();
