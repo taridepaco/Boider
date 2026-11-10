@@ -22,7 +22,9 @@ const DEFAULT_PARAMS = {
     margin: 100,
     edgeK: 0.3,
 
-    obstacleRadius: 80,
+    // on a phone-sized screen (same breakpoint as style.css) four full-size
+    // obstacles would cover almost the whole canvas, so they start at half reach
+    obstacleRadius: window.matchMedia('(max-width: 720px)').matches ? 40 : 80,
 
     // field of view in degrees: neighbours behind the boid are ignored
     fov: 270,
