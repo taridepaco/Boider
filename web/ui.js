@@ -247,9 +247,11 @@ function syncPanel() {
     document.getElementById(`mode-${params.mouseMode}`).checked = true;
 }
 
+// Same as reloading the page: default params, the initial obstacles and a new flock.
 function resetDefaults() {
     Object.assign(params, DEFAULT_PARAMS);
-    setBoidCount(params.boidCount);
+    resetObstacles();
+    resetBoids();
     syncPanel();
     updateHint();
 }

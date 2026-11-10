@@ -66,14 +66,14 @@ Las fuerzas de todos los boids se calculan a partir de la misma foto del estado,
 
 | Parámetro | Valor por defecto | Efecto |
 |---|---|---|
-| `boidCount` | 200 | Número de boids |
-| `radiusCohesion` / `radiusAlignment` / `radiusSeparation` | 70 / 100 / 30 px | Radios de percepción de cada regla |
-| `cohesionK` / `alignmentK` / `separationK` | 1 / 1 / 1.5 | Peso de cada regla |
-| `obstacleK`, `obstacleRadius` | 3, 80 px | Fuerza y alcance con que se esquivan los obstáculos |
+| `boidCount` | 500 | Número de boids |
+| `radiusCohesion` / `radiusAlignment` / `radiusSeparation` | 80 / 35 / 25 px | Radios de percepción de cada regla |
+| `cohesionK` / `alignmentK` / `separationK` | 1 / 1.5 / 2 | Peso de cada regla |
+| `obstacleK`, `obstacleRadius` | 3, 80 px (40 px en pantallas de menos de 720 px) | Fuerza y alcance con que se esquivan los obstáculos |
 | `vMax` / `vMin` | 4 / 1.5 px/frame | Velocidad máxima y mínima |
 | `maxForce` | 0.1 | Giro máximo por frame de cada regla |
 | `margin`, `edgeK` | 100 px, 0.3 | Ancho y fuerza de los bordes blandos |
-| `fov` | 270° | Campo de visión |
+| `fov` | 360° | Campo de visión |
 | `mouseMode`, `mouseRadius`, `mouseK` | obstacle, 150 px, 2 | Modo, alcance y fuerza del ratón |
 
 ## Licencia
