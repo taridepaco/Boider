@@ -1,5 +1,5 @@
 [Unit]
-Description=Boider (static site for boider.taridepaco.com.es)
+Description=Boider (static site on 127.0.0.1:8002)
 After=network-online.target
 Wants=network-online.target
 

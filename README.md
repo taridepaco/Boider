@@ -32,29 +32,33 @@ En el móvil el panel aparece debajo del lienzo y se puede plegar.
 
 ## Aspecto
 
-La página usa el sistema de diseño común de [taridepaco.github.io](https://taridepaco.github.io/): `system.css` (tokens y piezas) y `theme.js` (tema claro, oscuro o el del sistema) son copias sin modificar de [ese repositorio](https://github.com/taridepaco/taridepaco.github.io) y no se editan aquí. Lo propio de Boider (panel, deslizadores, selector de modo, marco del lienzo) está en `style.css`, hecho con los mismos tokens.
+La página usa el sistema de diseño común de [taridepaco.github.io](https://taridepaco.github.io/): `web/system.css` (tokens y piezas) y `web/theme.js` (tema claro, oscuro o el del sistema) son copias sin modificar de [ese repositorio](https://github.com/taridepaco/taridepaco.github.io) y no se editan aquí. Lo propio de Boider (panel, deslizadores, selector de modo, marco del lienzo) está en `web/style.css`, hecho con los mismos tokens.
 
 Está en español e inglés. El idioma y el tema elegidos se comparten con el resto de páginas de taridepaco.github.io.
 
 ## Ejecutar en local
 
-No necesita compilación. Basta con servir la carpeta:
+No necesita compilación. Basta con servir la carpeta `web/`:
 
 ```sh
-python3 -m http.server 8000
+python3 -m http.server 8000 --directory web
 # abre http://localhost:8000
 ```
+
+Lo que se publica es `dist/`, que genera `deploy/build.sh` (ver [DEPLOY.md](DEPLOY.md)).
 
 ## Estructura
 
 | Archivo | Qué hace |
 |---|---|
-| `params.js` | Parámetros de la simulación (radios, pesos, velocidades). Se leen en cada frame. |
-| `grid.js` | Rejilla espacial para buscar vecinos sin comparar todos con todos. |
-| `boid.js` | Reglas de Reynolds, integración y forma de cada boid. |
-| `obstacle.js` | Obstáculos con posición relativa al lienzo. |
-| `render.js` | Bucle de p5: rejilla → fuerzas → movimiento → dibujo. También gestiona el ratón. |
-| `ui.js`, `style.css` | Panel de control. |
+| `web/params.js` | Parámetros de la simulación (radios, pesos, velocidades). Se leen en cada frame. |
+| `web/grid.js` | Rejilla espacial para buscar vecinos sin comparar todos con todos. |
+| `web/boid.js` | Reglas de Reynolds, integración y forma de cada boid. |
+| `web/obstacle.js` | Obstáculos con posición relativa al lienzo. |
+| `web/render.js` | Bucle de p5: rejilla → fuerzas → movimiento → dibujo. También gestiona el ratón. |
+| `web/ui.js`, `web/style.css` | Panel de control. |
+| `deploy/` | Construcción de `dist/` e instalación en el servidor propio ([DEPLOY.md](DEPLOY.md)). |
+| `.github/workflows/pages.yml` | Publica `dist/` en GitHub Pages con cada push a `main`. |
 
 Las fuerzas de todos los boids se calculan a partir de la misma foto del estado, y después se mueven todos a la vez. Así el resultado no depende del orden de la lista.
 

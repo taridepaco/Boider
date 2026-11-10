@@ -1,97 +1,84 @@
 # Despliegue
 
-Boider es una web estática y se publica en dos sitios con los mismos ficheros:
+Boider es una web estática. `deploy/build.sh` la construye en `dist/`, y ese mismo `dist/` se publica en todos los sitios:
 
 | Dónde | URL | Cómo se actualiza |
 |---|---|---|
-| GitHub Pages | https://taridepaco.github.io/Boider/ | Automáticamente con cada push a `master` (*Settings → Pages → Deploy from a branch → master → / (root)*). |
-| Servidor propio | https://boider.taridepaco.com.es | Por un túnel de Cloudflare ya existente, con los pasos de abajo. |
+| GitHub Pages | https://taridepaco.github.io/Boider/ | Solo, con cada push a `main` (`.github/workflows/pages.yml`). |
+| Servidor propio | https://boider.taridepaco.com.es | A mano: `deploy/build.sh && sudo deploy/install.sh`. |
 
-Todas las rutas son relativas, así que la web funciona igual en la raíz de un dominio que bajo `/Boider/`.
+`deploy/build.sh`, `deploy/install.sh` y `.github/workflows/pages.yml` son comunes a todas las webs de taridepaco. Se copian desde [taridepaco.github.io](https://github.com/taridepaco/taridepaco.github.io): no se editan aquí.
 
-## boider.taridepaco.com.es (túnel de Cloudflare en WSL)
+## Construir
+
+```sh
+deploy/build.sh                                   # web/ → dist/
+python3 -m http.server 8000 --directory dist      # para probar el resultado
+```
+
+`dist/` no se sube a git. Todo salvo `index.html` va en `v/<hash>/`, un directorio con el nombre del contenido, e `index.html` apunta ahí. Con cada cambio cambian las URLs, así que ninguna caché mezcla dos versiones: GitHub Pages guarda los ficheros 10 minutos y Cloudflare guarda CSS y JS durante horas.
+
+Todas las rutas son relativas, así que `dist/` funciona igual en la raíz de un dominio que bajo una subruta como `/Boider/`.
+
+## GitHub Pages
+
+- En cada PR, el workflow construye la web pero no la publica.
+- En cada push a `main`, o a mano desde *Actions → Pages → Run workflow*, además publica `dist/`.
+- Si falla la construcción, no se publica nada.
+
+Configuración, una sola vez: *Settings → Pages → Build and deployment → Source: GitHub Actions*.
+
+## Servidor propio (túnel de Cloudflare en WSL)
 
 ```
-Navegador ── HTTPS ── Cloudflare ── túnel <TUNEL> ──► cloudflared (WSL) ──► http://localhost:8002
-                                                                             python3 -m http.server en 127.0.0.1
+Navegador ── HTTPS ── Cloudflare ── túnel ──► cloudflared (WSL) ──► http://localhost:8002
+                                                                    python3 -m http.server en 127.0.0.1
 ```
 
-- **Servicio:** `boider.service`. Usuario de sistema `boider` y aislamiento de systemd.
-- **Ficheros servidos:** `/opt/boider`. Es una copia que hace `deploy/install.sh`, nunca el repo entero.
+- **Servicio:** `deploy/boider.service`. Usuario de sistema `boider` y aislamiento de systemd.
+- **Ficheros servidos:** `/opt/boider`, una copia de `dist/`. Son de root y el servicio solo puede leerlos.
 - **Puerto:** `8002`, solo en `127.0.0.1`.
-- **Caché:** Cloudflare guarda JS y CSS durante 4 h. Por eso `install.sh` cambia cada `?v=dev` de `index.html` por un hash del contenido, y tras cada actualización se piden ficheros nuevos.
 
-Los comandos con `sudo` se ejecutan en WSL desde la raíz del repo, clonado por ejemplo en `~/Boider`. Sustituye `<TUNEL>` por el nombre de tu túnel, que puedes ver con `cloudflared tunnel list`.
+### Instalar o actualizar
 
-### 1. Comprobar que el puerto está libre
-
-```sh
-ss -ltn | grep ':8002 ' || echo "8002 libre"
-```
-
-Si está ocupado, elige otro y cámbialo en `deploy/boider.service` y en la entrada del túnel.
-
-### 2. Usuario de sistema y ficheros
-
-```sh
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin boider
-sudo deploy/install.sh
-```
-
-### 3. Unidad de systemd
-
-```sh
-sudo cp deploy/boider.service /etc/systemd/system/boider.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now boider
-curl -sI http://127.0.0.1:8002/ | head -1    # HTTP/1.0 200 OK
-```
-
-### 4. Entrada en el túnel
-
-Edita la configuración con `sudo nano /etc/cloudflared/config.yml` y añade la entrada **antes** de la regla 404, sin tocar las demás:
-
-```yaml
-ingress:
-  # ...tus otras entradas...
-  - hostname: boider.taridepaco.com.es
-    service: http://localhost:8002
-  - service: http_status:404
-```
-
-```sh
-cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml
-```
-
-### 5. DNS
-
-Ejecútalo como tu usuario, sin sudo:
-
-```sh
-cloudflared tunnel route dns <TUNEL> boider.taridepaco.com.es
-```
-
-### 6. Reiniciar el túnel y comprobar
-
-```sh
-sudo systemctl restart cloudflared
-systemctl status boider cloudflared --no-pager
-curl -sI https://boider.taridepaco.com.es/ | head -1
-systemd-analyze security boider
-```
-
-## Actualizar
+Desde WSL, en la raíz del repo:
 
 ```sh
 git pull
-sudo deploy/install.sh
+deploy/build.sh && sudo deploy/install.sh
 ```
 
-No hace falta reiniciar nada, porque el servidor lee los ficheros en cada petición.
+`install.sh` crea el usuario y la unidad la primera vez. Después solo sustituye los ficheros y reinicia el servicio.
 
-## Volver atrás
+### Primera vez: túnel y DNS
+
+Sustituye `<túnel>` por el nombre de tu túnel (`cloudflared tunnel list`).
+
+1. Comprueba que el puerto está libre con `ss -ltn | grep ':8002 ' || echo libre`. Si está ocupado, elige otro y cámbialo en `deploy/boider.service` y en la entrada del túnel.
+2. Añade la entrada en `/etc/cloudflared/config.yml` **antes** de la regla 404, sin tocar las demás:
+
+   ```yaml
+   ingress:
+     # ...tus otras entradas...
+     - hostname: boider.taridepaco.com.es
+       service: http://localhost:8002
+     - service: http_status:404
+   ```
+
+3. Valida, crea el DNS (como tu usuario, sin sudo) y reinicia el túnel:
+
+   ```sh
+   cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml
+   cloudflared tunnel route dns <túnel> boider.taridepaco.com.es
+   sudo systemctl restart cloudflared
+   curl -sI https://boider.taridepaco.com.es/ | head -1
+   ```
+
+### Retirar
 
 1. Quita la entrada `boider` de `/etc/cloudflared/config.yml` y ejecuta `sudo systemctl restart cloudflared`.
 2. `sudo systemctl disable --now boider && sudo rm /etc/systemd/system/boider.service`
 3. `sudo rm -rf /opt/boider && sudo userdel boider`
-4. Borra el registro `CNAME` `boider` en el panel de Cloudflare.
+4. Borra el registro DNS de `boider.taridepaco.com.es` en el panel de Cloudflare.
+
+Los scripts de `deploy/` se quedan en el repo: sirven para volver a instalarlo en esta u otra máquina.
