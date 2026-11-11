@@ -1,6 +1,9 @@
 /* Boider: lo que el sistema común (system.css) no cubre.
-   Disposición de la página, el panel plegable, los deslizadores, el selector de modo
-   y el marco del lienzo. Todo con los tokens del sistema: sin colores literales ni radios. */
+   Disposición de la página, el panel plegable, los deslizadores, el selector de modo,
+   el marco del lienzo con su línea de estado y la barra de mandos del móvil.
+   Todo con los tokens del sistema: sin colores literales ni radios.
+   La página de simulador es la de GameOfLifer: el panel, el deslizador y el selector
+   segmentado son los mismos en los dos. */
 html, body { height: 100%; overflow: hidden; }
 
 body {
@@ -24,6 +27,11 @@ body {
 .topbar .back { text-underline-offset: 4px; }
 .topbar h1 { font-size: 1.25rem; }
 .topbar .tag { margin-right: auto; }
+/* con el dedo (un móvil en horizontal pasa de 720px) el enlace de vuelta mide 36px de alto,
+   como los botones de al lado; la fila no cambia */
+@media (pointer: coarse) {
+    .topbar .back { display: inline-flex; align-items: center; min-height: 36px; }
+}
 
 .app {
     flex: 1;
@@ -79,10 +87,14 @@ body {
 fieldset {
     min-width: 0;
     margin: 0;
-    padding: 0 0 16px;
+    padding: 0 0 18px;
     border: 0;
     border-bottom: var(--bw) dashed var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
+fieldset:last-child { border-bottom: 0; padding-bottom: 0; }
 legend {
     padding: 16px 0 0;
     margin-bottom: 10px;
@@ -92,6 +104,22 @@ legend {
     letter-spacing: -.02em;
 }
 
+.hint {
+    margin: 0;
+    font-size: .86rem;
+    color: var(--muted);
+}
+
+/* botones a dos columnas; el margen derecho deja ver la sombra */
+.buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 0 5px 5px 0;
+}
+.buttons .btn { width: 100%; min-height: 40px; text-align: center; }
+.buttons .wide { grid-column: 1 / -1; }
+
 /* deslizador: etiqueta y valor arriba, pista cuadrada debajo */
 .slider {
     display: grid;
@@ -99,7 +127,6 @@ legend {
     align-items: baseline;
     gap: 0 8px;
 }
-.slider + .slider { margin-top: 6px; }
 .slider label { display: block; font-size: .92rem; }
 .slider output {
     font-family: var(--f-util);
@@ -160,7 +187,7 @@ legend {
     .slider input[type="range"] { height: 36px; }
 }
 
-/* selector de modo del ratón: tres opciones pegadas, como el selector de idioma */
+/* selector segmentado del modo del ratón: tres opciones pegadas, como el selector de idioma */
 .modes {
     position: relative;
     display: grid;
@@ -198,24 +225,15 @@ legend {
     outline-offset: 2px;
     position: relative;
 }
-.hint {
-    margin: 8px 0 12px;
-    font-size: .86rem;
-    color: var(--muted);
-}
 
-.buttons {
-    display: grid;
-    gap: 14px;
-    padding: 18px 5px 0 0;
-}
-.buttons .btn { width: 100%; text-align: center; }
-
-/* el lienzo va enmarcado como una pantalla */
-#canvasContainer {
+/* el lienzo va enmarcado como una pantalla, con una línea de estado debajo */
+.screen {
+    position: relative;
     flex: 1;
     min-width: 0;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
     margin: 16px 21px 21px 16px;
     margin-right: max(21px, env(safe-area-inset-right, 0px));
     border: var(--bw) solid var(--line);
@@ -223,22 +241,122 @@ legend {
     background: var(--surface);
     overflow: hidden;
 }
-#canvasContainer canvas {
+/* p5 da al lienzo un tamaño entero en px CSS; el hueco que lo contiene puede medir una fracción
+   más, así que el lienzo se estira a todo el hueco y no queda una raya sin pintar */
+.stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+.stage canvas {
+    position: absolute;
+    inset: 0;
     display: block;
+    width: 100% !important;
+    height: 100% !important;
     touch-action: none;
 }
 
+.status {
+    flex: none;
+    padding: 5px 10px;
+    border-top: var(--bw) solid var(--line);
+    background: var(--surface);
+    font-family: var(--f-util);
+    font-weight: 500;
+    font-size: var(--util);
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* solo en el móvil: la barra de mandos y la sección de aspecto del panel */
+.deck, .m-only { display: none; }
+/* la sección de aspecto es la última del panel: oculta, la anterior cierra el panel sin raya */
+@media not all and (max-width: 720px) {
+    fieldset:has(+ .m-only:last-child) { border-bottom: 0; padding-bottom: 0; }
+}
+
+/* Móvil: la pantalla manda.
+   - Cabecera en una fila: solo la flecha de vuelta (el texto sigue para lectores de pantalla),
+     el título y el idioma. La etiqueta se oculta y el botón de tema pasa al panel (Aspecto).
+   - Bajo la pantalla, una barra con los tres botones del panel.
+   - El panel empieza plegado (index.html) y al abrirse sube como una hoja por encima de la parte
+     baja del lienzo, sin encogerlo: la bandada no se recoloca. */
 @media (max-width: 720px) {
-    .topbar { gap: 8px 10px; }
-    .app { flex-direction: column-reverse; }
+    .topbar { flex-wrap: nowrap; gap: 10px; padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
+    .topbar .back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        min-height: 36px;
+        margin-left: -10px;
+        text-decoration: none;
+    }
+    .topbar .back-arrow { font-size: 1.1rem; }
+    .topbar .back-text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    .topbar h1 {
+        min-width: 0;
+        margin-right: auto;
+        font-size: 1.05rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .topbar .tag, .topbar .theme-btn { display: none; }
+
+    .app { flex-direction: column; }
+    .screen { order: 1; margin: 10px 17px 12px 12px; }
+    .status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .deck {
+        order: 2;
+        flex: none;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 max(17px, env(safe-area-inset-right, 0px)) 17px max(12px, env(safe-area-inset-left, 0px));
+    }
+    .deck .btn { min-width: 0; min-height: 44px; padding: 8px 4px; text-align: center; }
+    @media (max-width: 360px) { .deck .btn { font-size: .74em; letter-spacing: -.02em; } }
+
     #panel,
     #panel[open] {
+        order: 3;
+        position: relative;
+        flex: none;
         width: 100%;
-        max-height: 45dvh;
+        overflow: visible;
         border-right: 0;
         border-top: var(--bw) solid var(--line);
         padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+    #panel[open] > summary { border-bottom: 0; }
+    #panel[open] > #controls {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 100%;
+        z-index: 5;
+        max-height: 58dvh;
+        overflow-y: auto;
+        background: var(--surface);
+        border-top: var(--bw) solid var(--line);
+        border-bottom: var(--bw) solid var(--line);
+        box-shadow: 0 -5px 0 var(--shade);
+        scrollbar-color: var(--line) var(--surface);
+    }
     #controls { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-    #canvasContainer { margin: 12px 17px 17px 12px; }
+
+    /* lo que ya está en la barra de mandos no se repite en el panel */
+    #panel .desk { display: none; }
+    .m-only { display: flex; }
 }

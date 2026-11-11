@@ -36,10 +36,10 @@
 </head>
 <body>
     <header class="topbar">
-        <a class="util back" href="https://taridepaco.github.io/">← taridepaco</a>
+        <a class="util back" href="https://taridepaco.github.io/"><span class="back-arrow" aria-hidden="true">←</span><span class="back-text"> taridepaco</span></a>
         <h1>Boider</h1>
         <span class="tag" data-i18n="kind">Simulador</span>
-        <button class="chip" type="button" id="theme-btn">Tema: auto</button>
+        <button class="chip theme-btn" type="button">Tema: auto</button>
         <div class="lang-switch" role="group" aria-label="Language / Idioma">
             <button type="button" data-lang="es" lang="es" aria-label="Español" aria-pressed="true">ES</button>
             <button type="button" data-lang="en" lang="en" aria-label="English" aria-pressed="false">EN</button>
@@ -48,9 +48,24 @@
     <div class="app">
         <details id="panel" open>
             <summary><span class="util" data-i18n="panel">Controles</span></summary>
+            <script>
+                // phones and low screens (landscape phones) start with the panel folded, before the first paint
+                if (window.matchMedia && matchMedia("(max-width: 720px), (max-height: 500px)").matches) document.getElementById("panel").open = false;
+            </script>
+            <!-- built by ui.js -->
             <div id="controls"></div>
         </details>
-        <main id="canvasContainer"></main>
+        <div class="deck" role="group" data-i18n-label="deck" aria-label="Mandos principales">
+            <!-- one short word each, so the three fit in a row on any phone; the full label is the title -->
+            <button class="btn" type="button" data-act="reset" data-i18n="deck.reset" data-i18n-title="b.reset" title="Reiniciar boids">Reiniciar</button>
+            <button class="btn ghost" type="button" data-act="clear" data-i18n="deck.clear" data-i18n-title="b.clear" title="Quitar obstáculos">Despejar</button>
+            <button class="btn ghost" type="button" data-act="defaults" data-i18n="deck.defaults" data-i18n-title="b.defaults" title="Valores por defecto">Restaurar</button>
+        </div>
+        <main class="screen">
+            <!-- render.js puts the p5 canvas here -->
+            <div id="canvasContainer" class="stage" role="img" data-i18n-label="board" aria-label="Bandada de boids"></div>
+            <div id="stats" class="status" aria-live="off">&nbsp;</div>
+        </main>
     </div>
 </body>
 </html>
