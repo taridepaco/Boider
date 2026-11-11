@@ -28,11 +28,17 @@ El panel lateral permite cambiar en vivo:
   - **Depredador:** los boids huyen del cursor.
   - **Cebo:** los boids se acercan al cursor.
 
-En el móvil el panel aparece debajo del lienzo y se puede plegar.
+Arriba del panel están los botones: reiniciar la bandada, quitar los obstáculos y volver a los valores por defecto.
+
+En el móvil la pantalla va primero. Debajo hay una barra con esos tres botones (*Reiniciar*, *Despejar*, *Restaurar*) y, abajo del todo, la tira *Controles*, que abre el resto del panel como una hoja sobre la parte baja del lienzo sin cambiar su tamaño.
+
+Bajo el lienzo, una línea de estado muestra los boids, los fotogramas por segundo, los obstáculos y el tamaño del mundo (en el móvil, solo los dos primeros).
 
 ## Aspecto
 
-La página usa el sistema de diseño común de [taridepaco.github.io](https://taridepaco.github.io/): `web/system.css` (tokens y piezas) y `web/theme.js` (tema claro, oscuro o el del sistema) son copias sin modificar de [ese repositorio](https://github.com/taridepaco/taridepaco.github.io) y no se editan aquí. Lo propio de Boider (panel, deslizadores, selector de modo, marco del lienzo) está en `web/style.css`, hecho con los mismos tokens.
+La página usa el sistema de diseño común de [taridepaco.github.io](https://taridepaco.github.io/): `web/system.css` (tokens y piezas) y `web/theme.js` (tema claro, oscuro o el del sistema) son copias sin modificar de [ese repositorio](https://github.com/taridepaco/taridepaco.github.io) y no se editan aquí. Lo propio de Boider (cabecera, panel, deslizadores, selector de modo, marco del lienzo, barra de mandos del móvil) está en `web/style.css`, hecho con los mismos tokens. La página de simulador es la misma que la de [GameOfLifer](https://github.com/taridepaco/GameOfLifer).
+
+El mundo es el propio lienzo, en px CSS, y ocupa todo el sitio que deja el panel. El lienzo se dibuja a los píxeles reales de la pantalla (tamaño CSS × `devicePixelRatio`), así que los boids se ven nítidos en el móvil. Los obstáculos guardan su posición relativa al lienzo y siguen en su sitio cuando cambia el tamaño.
 
 Está en español e inglés. El idioma y el tema elegidos se comparten con el resto de páginas de taridepaco.github.io.
 
@@ -55,8 +61,8 @@ Lo que se publica es `dist/`, que genera `deploy/build.sh` (ver [DEPLOY.md](DEPL
 | `web/grid.js` | Rejilla espacial para buscar vecinos sin comparar todos con todos. |
 | `web/boid.js` | Reglas de Reynolds, integración y forma de cada boid. |
 | `web/obstacle.js` | Obstáculos con posición relativa al lienzo. |
-| `web/render.js` | Bucle de p5: rejilla → fuerzas → movimiento → dibujo. También gestiona el ratón. |
-| `web/ui.js`, `web/style.css` | Panel de control. |
+| `web/render.js` | Bucle de p5: rejilla → fuerzas → movimiento → dibujo. También gestiona el ratón y el tamaño del lienzo. |
+| `web/ui.js`, `web/style.css` | Panel de control, barra de mandos del móvil, línea de estado, tema e idioma. |
 | `deploy/` | Construcción de `dist/` e instalación en el servidor propio ([DEPLOY.md](DEPLOY.md)). |
 | `.github/workflows/pages.yml` | Publica `dist/` en GitHub Pages con cada push a `main`. |
 

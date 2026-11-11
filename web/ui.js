@@ -26,10 +26,14 @@ const SLIDER_GROUPS = [
 
 const MOUSE_MODES = ['obstacle', 'predator', 'bait'];
 
+// The buttons say what they do with data-act. They are at the top of the panel and, on phones,
+// in the deck under the canvas instead (index.html): one handler per action for both copies.
+const ACTIONS = { reset: () => resetBoids(), clear: () => clearObstacles(), defaults: () => resetDefaults() };
+// All three take the whole width: in two columns "Valores por defecto" breaks into three lines.
 const BUTTONS = [
-    ['b.reset', resetBoids, 'btn'],
-    ['b.clear', clearObstacles, 'btn ghost'],
-    ['b.defaults', resetDefaults, 'btn ghost'],
+    ['reset', 'b.reset', 'btn wide'],
+    ['clear', 'b.clear', 'btn ghost wide'],
+    ['defaults', 'b.defaults', 'btn ghost wide'],
 ];
 
 const TEXT = {
@@ -38,6 +42,10 @@ const TEXT = {
         'kind': 'Simulador',
         'panel': 'Controles',
         'pitch': 'Una bandada de boids: tres reglas locales y aparece el vuelo en grupo.',
+        'deck': 'Mandos principales',
+        'board': 'Bandada de boids',
+        'g.run': 'Simulación',
+        'g.look': 'Aspecto',
         'g.flock': 'Bandada',
         'g.rules': 'Reglas de Reynolds',
         'g.radii': 'Radios de percepción',
@@ -62,15 +70,25 @@ const TEXT = {
         'b.reset': 'Reiniciar boids',
         'b.clear': 'Quitar obstáculos',
         'b.defaults': 'Valores por defecto',
+        'deck.reset': 'Reiniciar',
+        'deck.clear': 'Despejar',
+        'deck.defaults': 'Restaurar',
         'theme.auto': 'Tema: auto',
         'theme.light': 'Tema: claro',
         'theme.dark': 'Tema: oscuro',
+        'st.obstacle': 'obstáculo',
+        'st.obstacles': 'obstáculos',
+        'st.world': 'mundo',
     },
     en: {
         'desc': 'Interactive flocking simulation (Craig Reynolds\' boids).',
         'kind': 'Simulator',
         'panel': 'Controls',
         'pitch': 'A flock of boids: three local rules and group flight appears.',
+        'deck': 'Main controls',
+        'board': 'Flock of boids',
+        'g.run': 'Simulation',
+        'g.look': 'Appearance',
         'g.flock': 'Flock',
         'g.rules': 'Reynolds\' rules',
         'g.radii': 'Perception radii',
@@ -95,9 +113,15 @@ const TEXT = {
         'b.reset': 'Reset boids',
         'b.clear': 'Clear obstacles',
         'b.defaults': 'Default values',
+        'deck.reset': 'Reset',
+        'deck.clear': 'Clear',
+        'deck.defaults': 'Defaults',
         'theme.auto': 'Theme: auto',
         'theme.light': 'Theme: light',
         'theme.dark': 'Theme: dark',
+        'st.obstacle': 'obstacle',
+        'st.obstacles': 'obstacles',
+        'st.world': 'world',
     },
 };
 
@@ -122,11 +146,21 @@ function buildPanel() {
     pitch.dataset.i18n = 'pitch';
     root.append(pitch);
 
+    // the buttons first; on phones they are in the deck, so this group only shows on desktop
+    const run = document.createElement('fieldset');
+    run.className = 'desk';
+    run.innerHTML = '<legend data-i18n="g.run"></legend><div class="buttons"></div>';
+    for (const [act, label, className] of BUTTONS) {
+        run.lastChild.insertAdjacentHTML('beforeend',
+            `<button class="${className}" type="button" data-act="${act}" data-i18n="${label}"></button>`);
+    }
+    root.append(run);
+
     for (const [group, sliders] of SLIDER_GROUPS) {
         const fieldset = document.createElement('fieldset');
         fieldset.innerHTML = `<legend data-i18n="g.${group}"></legend>`;
 
-        if (group === 'mouse') fieldset.append(buildModeSelector());
+        if (group === 'mouse') fieldset.append(...buildModeSelector());
 
         for (const s of sliders) {
             const id = `p-${s.key}`;
@@ -156,17 +190,14 @@ function buildPanel() {
         root.append(fieldset);
     }
 
-    const buttons = document.createElement('div');
-    buttons.className = 'buttons';
-    for (const [label, action, className] of BUTTONS) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = className;
-        b.dataset.i18n = label;
-        b.addEventListener('click', action);
-        buttons.append(b);
-    }
-    root.append(buttons);
+    // phones only: the theme button leaves the top bar and comes here
+    const look = document.createElement('fieldset');
+    look.className = 'm-only';
+    look.innerHTML = '<legend data-i18n="g.look"></legend>'
+        + '<div class="row"><button class="chip theme-btn" type="button"></button></div>';
+    root.append(look);
+
+    for (const b of document.querySelectorAll('[data-act]')) b.addEventListener('click', ACTIONS[b.dataset.act]);
 
     setupTopbar();
     syncPanel();
@@ -188,23 +219,22 @@ function buildModeSelector() {
     const hint = document.createElement('p');
     hint.className = 'hint';
     hint.id = 'modeHint';
-    const wrap = document.createElement('div');
-    wrap.append(group, hint);
-    return wrap;
+    return [group, hint];
 }
 
 function updateHint() {
     document.getElementById('modeHint').textContent = t(`h.${params.mouseMode}`);
 }
 
-// Theme button (auto -> light -> dark) and language switch.
+// Theme button (auto -> light -> dark) and language switch. There are two theme buttons, in the
+// top bar and, on phones, in the panel: they change together.
 function setupTopbar() {
-    const themeBtn = document.getElementById('theme-btn');
+    const themeBtns = document.querySelectorAll('.theme-btn');
     if (window.Theme) {
-        themeBtn.addEventListener('click', () => Theme.cycle());
+        for (const b of themeBtns) b.addEventListener('click', () => Theme.cycle());
         Theme.onChange(syncTheme);
     } else {
-        themeBtn.hidden = true;
+        for (const b of themeBtns) b.hidden = true;
     }
     for (const b of document.querySelectorAll('.lang-switch button')) {
         b.addEventListener('click', () => {
@@ -216,9 +246,13 @@ function setupTopbar() {
     syncTheme();
 }
 
+function paintThemeButtons() {
+    if (!window.Theme) return;
+    for (const b of document.querySelectorAll('.theme-btn')) b.textContent = t(`theme.${Theme.mode()}`);
+}
+
 function syncTheme() {
-    const themeBtn = document.getElementById('theme-btn');
-    if (window.Theme) themeBtn.textContent = t(`theme.${Theme.mode()}`);
+    paintThemeButtons();
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
     readPalette(); // the canvas does not inherit the CSS tokens
@@ -229,13 +263,29 @@ function paintText() {
     document.documentElement.lang = lang;
     for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
     for (const el of document.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
+    for (const el of document.querySelectorAll('[data-i18n-label]')) el.setAttribute('aria-label', t(el.dataset.i18nLabel));
     for (const b of document.querySelectorAll('.lang-switch button')) {
         b.setAttribute('aria-pressed', b.dataset.lang === lang);
     }
     document.getElementById('modes').setAttribute('aria-label', t('m.label'));
     document.querySelector('meta[name="description"]').content = t('desc');
-    if (window.Theme) document.getElementById('theme-btn').textContent = t(`theme.${Theme.mode()}`);
+    paintThemeButtons();
     updateHint();
+    paintStats();
+}
+
+// Status line under the canvas, every half second (render.js) and when the language changes.
+// The world is the canvas itself, in CSS px. Phones get one short line: boids and fps only.
+const narrow = window.matchMedia('(max-width: 720px)');
+function paintStats() {
+    if (!worldReady || !fps) return; // nothing measured yet
+    const n = (v) => v.toLocaleString(lang);
+    const parts = [`${n(flock.length)} boids`, `${n(Math.round(fps))} fps`];
+    if (!narrow.matches) {
+        parts.push(`${n(obstacles.length)} ${t(obstacles.length === 1 ? 'st.obstacle' : 'st.obstacles')}`);
+        parts.push(`${t('st.world')} ${width}×${height}`);
+    }
+    document.getElementById('stats').textContent = parts.join(' · ');
 }
 
 // Writes the current params into every control.

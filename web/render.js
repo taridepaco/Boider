@@ -6,6 +6,13 @@ const initialObstacles = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]
 // Mouse/touch over the canvas. A mouse acts while hovering, a finger while touching.
 const pointer = { active: false, x: 0, y: 0 };
 
+// The world is the canvas in CSS px. It is made (flock and obstacles) once the canvas has its
+// final size, see setup().
+let worldReady = false;
+
+// frames per second for the status line (ui.js)
+let fps = 0, statT = 0, statFrames = 0;
+
 // Canvas colours. The canvas does not inherit the CSS tokens, so they are read
 // from the page and refreshed when the theme changes (ui.js calls readPalette).
 // The sky is the one from the taridepaco island, with a day and a night version.
@@ -42,8 +49,14 @@ function canvasSize() {
     return [Math.max(1, container.clientWidth), Math.max(1, container.clientHeight)];
 }
 
+// The canvas is drawn at the real pixels of the screen (CSS size × devicePixelRatio), so the
+// boids are sharp on phones. The simulation still works in CSS px.
+function screenDensity() {
+    return window.devicePixelRatio || 1;
+}
+
 function setup() {
-    pixelDensity(1);
+    pixelDensity(screenDensity());
     const myCanvas = createCanvas(...canvasSize());
     myCanvas.parent('canvasContainer');
     setupPointer(myCanvas.elt);
@@ -52,13 +65,29 @@ function setup() {
     new ResizeObserver(fitCanvas).observe(document.getElementById('canvasContainer'));
 
     readPalette();
-    resetObstacles();
-    setBoidCount(params.boidCount);
+
+    // The world takes the size of the canvas, and the canvas only has its final size once the web
+    // fonts are in: they change the width of the folded panel and the height of the top bar.
+    // Waits for them, 1.5 s at most; until then the canvas shows only the sky.
+    const fontsReady = document.fonts && document.fonts.ready
+        ? Promise.race([document.fonts.ready, new Promise((done) => setTimeout(done, 1500))])
+        : Promise.resolve();
+    fontsReady.then(() => {
+        fitCanvas();
+        worldReady = true;
+        resetObstacles();
+        setBoidCount(params.boidCount);
+        fps = 0; // the status line shows up with the first measure, half a second later
+        statFrames = 0;
+        statT = performance.now();
+    });
 }
 
 function fitCanvas() {
     const [w, h] = canvasSize();
-    if (w === width && h === height) return;
+    const density = screenDensity();
+    if (w === width && h === height && density === pixelDensity()) return;
+    if (density !== pixelDensity()) pixelDensity(density); // browser zoom, or another screen
     resizeCanvas(w, h);
     for (const o of obstacles) o.resize();
 }
@@ -69,6 +98,7 @@ function windowResized() {
 
 function setBoidCount(n) {
     params.boidCount = n;
+    if (!worldReady) return; // the flock is made once the canvas has its final size
     while (flock.length < n) flock.push(new Boid());
     flock.length = n;
 }
@@ -99,6 +129,7 @@ function setupPointer(canvas) {
     canvas.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') pointer.active = false; });
     canvas.addEventListener('pointercancel', () => { pointer.active = false; });
     canvas.addEventListener('pointerdown', (e) => {
+        if (!worldReady) return;
         move(e);
         pointer.active = true;
         if (params.mouseMode === 'obstacle') toggleObstacleAt(pointer.x, pointer.y);
@@ -113,6 +144,10 @@ function toggleObstacleAt(x, y) {
 }
 
 function draw() {
+    // a change of devicePixelRatio alone (the window moved to another screen) does not resize
+    // the container, so the ResizeObserver does not see it
+    if (pixelDensity() !== screenDensity()) fitCanvas();
+
     // 1. rebuild neighbour grid
     const cellSize = Math.max(params.radiusCohesion, params.radiusAlignment, params.radiusSeparation);
     grid.resize(width, height, cellSize);
@@ -153,4 +188,13 @@ function draw() {
     beginShape(TRIANGLES);
     for (const boid of flock) boid.addVertices();
     endShape();
+
+    statFrames++;
+    const now = performance.now();
+    if (now - statT > 500) {
+        fps = statFrames * 1000 / (now - statT);
+        statFrames = 0;
+        statT = now;
+        paintStats();
+    }
 }
